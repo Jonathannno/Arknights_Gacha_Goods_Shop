@@ -15,6 +15,7 @@
             <file>file:/C:/NetBeansProjects/GachaStore/web/META-INF/context.xml</file>
             <file>file:/C:/NetBeansProjects/GachaStore/src/java/controller/accountservlet.java</file>
             <file>file:/C:/NetBeansProjects/GachaStore/src/java/controller/productservlet.java</file>
+            <file>file:/C:/NetBeansProjects/GachaStore/src/java/model/Product.java</file>
         </group>
     </open-files>
 </project-private>

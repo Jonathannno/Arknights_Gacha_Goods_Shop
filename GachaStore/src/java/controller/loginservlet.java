@@ -39,11 +39,14 @@ public class loginservlet extends HttpServlet {
                 HttpSession session = request.getSession();
 
                 session.setAttribute("user", username);
-
                 session.setAttribute("role", rs.getString("role"));
+
+                session.setAttribute("userId", rs.getInt("id")); 
+                // --------------------------
 
                 response.sendRedirect("home.jsp");
 
+            
             } else {
 
                 response.setContentType("text/html;charset=UTF-8");

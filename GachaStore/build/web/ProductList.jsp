@@ -1,214 +1,279 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-<%@ page import="java.sql.*, model.DBConnect" %>
+<%@ page import="java.sql.*, model.DBConnect, java.math.BigDecimal, java.text.DecimalFormat" %>
+
 <%
-    // 1. Security
-    String role = (String)session.getAttribute("role");
-    if(role == null || !role.equals("admin")) { response.sendRedirect("home.jsp"); return; }
+String role = (String)session.getAttribute("role");
+if(role == null || !role.equals("admin")) {
+    response.sendRedirect("home.jsp");
+    return;
+}
 
-    // 2. Get Parameters from Navbar
-    String query = request.getParameter("query");      
-    String category = request.getParameter("category"); 
-    String sort = request.getParameter("sort"); // NEW: Get sort value
+String query = request.getParameter("query");
+String sort = request.getParameter("sort");
 
-    Connection conn = DBConnect.getConnection();
-    
-    // 3. Dynamic SQL Construction
-    StringBuilder sql = new StringBuilder("SELECT * FROM products WHERE 1=1");
-    
-    if (query != null && !query.trim().isEmpty()) {
-        sql.append(" AND (name LIKE ? OR category LIKE ? OR description LIKE ?)");
-    }
-    if (category != null && !category.trim().isEmpty()) {
-        sql.append(" AND category = ?");
-    }
-
-    // 4. Handle Sorting Logic
-    // Default to 'id DESC' if nothing is selected
-    String orderBy = " id DESC"; 
-    if ("price_asc".equals(sort)) orderBy = " price ASC";
-    else if ("price_desc".equals(sort)) orderBy = " price DESC";
-    else if ("name_asc".equals(sort)) orderBy = " name ASC";
-    
-    sql.append(" ORDER BY").append(orderBy);
-
-    // 5. Prepare and Fill
-    PreparedStatement listPs = conn.prepareStatement(sql.toString());
-    int paramIndex = 1;
-    if (query != null && !query.trim().isEmpty()) {
-        String p = "%" + query + "%";
-        listPs.setString(paramIndex++, p);
-        listPs.setString(paramIndex++, p);
-        listPs.setString(paramIndex++, p);
-    }
-    if (category != null && !category.trim().isEmpty()) {
-        listPs.setString(paramIndex++, category);
-    }
-
-    ResultSet rs = listPs.executeQuery();
+Connection conn = null;
+PreparedStatement ps = null;
+ResultSet rs = null;
 %>
 
 <html>
 <head>
-    <title>Inventory Management</title>
+    <title>Inventory Management | Admin Console</title>
     <style>
+
+        @font-face {
+            font-family: 'Aptos SemiBold';
+            src: local('Aptos SemiBold'), local('Aptos-SemiBold');
+        }
+
         :root {
-            --primary: #2c3e50; --success: #27ae60; --warning: #f39c12; --danger: #e74c3c; --light: #f8f9fa;
+            --primary: #2c3e50;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #f8f9fa;
         }
-        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; margin: 0; }
-        
-        /* Navbar */
+
+        body {
+            background: #f0f2f5;
+            font-family: 'Aptos SemiBold', 'Segoe UI', sans-serif;
+            margin: 0;
+        }
+
         .navbar {
-            background: var(--primary); padding: 15px 50px; display: flex;
-            justify-content: space-between; align-items: center; color: white; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        }
-        .main-card { 
-            background: white; padding: 30px; border-radius: 12px; width: 90%; 
-            max-width: 1200px; margin: 30px auto; box-shadow: 0 4px 20px rgba(0,0,0,0.1); 
-        }
-
-        /* Add Form Section */
-        #addFormSection {
-            display: none; background: var(--light); padding: 20px; border-radius: 8px;
-            margin-bottom: 25px; border-left: 5px solid var(--success);
+            background: var(--primary);
+            padding: 15px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
-        /* Table Styling */
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { background: #f4f6f7; color: var(--primary); padding: 15px; text-align: left; }
-        td { padding: 12px; border-bottom: 1px solid #eee; }
-
-        .unlockable { 
-            border: 1px solid transparent; background: transparent; padding: 8px; 
-            width: 100%; color: #333; pointer-events: none; transition: 0.2s;
-        }
-        .active-row .unlockable { 
-            border: 1px solid #3498db; background: #fff; pointer-events: auto; 
+        .navbar form input, .navbar form select {
+            padding: 8px;
+            border-radius: 6px;
+            border: none;
+            font-family: inherit;
         }
 
-        .btn { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
-        .btn-home { background: transparent; color: white; border: 1px solid white; }
+        .main-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 95%;
+            margin: 30px auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background: #f4f6f7; padding: 15px; font-size: 16px; border-bottom: 2px solid #ddd; }
+        td { padding: 12px; border-bottom: 1px solid #eee; text-align: center; }
+
+        .unlockable {
+            pointer-events: none;
+            border: 1px solid transparent;
+            background: transparent;
+            text-align: center;
+            width: 100%;
+            font-family: inherit;
+            padding: 5px;
+        }
+
+        .active-row { background-color: #f0f7ff; }
+        .active-row .unlockable {
+            pointer-events: auto;
+            border: 1px solid #3498db;
+            background: white;
+            border-radius: 4px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: bold;
+            font-family: inherit;
+            transition: 0.2s;
+        }
+
+        .btn-update { background: var(--warning); color: white; }
+        .btn-delete { background: var(--danger); color: white; margin-left: 10px; }
+
+        .product-img {
+            width: 80px; height: 80px;
+            object-fit: contain;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        .add-bar {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            border: 1px solid #e9ecef;
+        }
+
+        .add-bar input { padding: 10px; border: 1px solid #ddd; border-radius: 6px; flex: 1; 
         
-        /* The Disclaimer Alert */
-        .status-msg { 
-            background: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; 
-            margin-bottom: 15px; border: 1px solid #ffeeba; font-weight: bold;
+                         .status-msg { 
+    background: #d1ecf1; 
+    color: #0c5460; 
+    padding: 12px; 
+    border-radius: 8px; 
+    margin-bottom: 20px; 
+    border: 1px solid #bee5eb; 
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
         }
     </style>
 </head>
+
 <body>
 
 <div class="navbar">
-    <div class="nav-left">
-        <button class="btn btn-home" onclick="window.location.href='home.jsp'">← Home</button>
-        <span style="font-size: 1.1rem; font-weight: bold; margin-left:10px;">Product Inventory</span>
+    <div>
+        <button class="btn" style="background:rgba(255,255,255,0.2)" onclick="window.location.href='home.jsp'">← Home</button>
+        <b style="font-size: 20px; margin-left: 15px;">Inventory Manager</b>
     </div>
 
-    <div class="nav-center">
-        <form method="get" action="ProductList.jsp" style="display: flex; gap: 8px;">
-            <input type="text" name="query" placeholder="Search anything..." 
-                   value="<%= (query != null) ? query : "" %>"
-                   style="padding: 8px; border-radius: 4px; border: none; width: 180px;">
-            
-            <select name="category" onchange="this.form.submit()" style="padding: 8px; border-radius: 4px; border: none;">
-                <option value="">All Categories</option>
-                <option value="Acrylic Stand" <%= "Acrylic Stand".equals(category) ? "selected" : "" %>>Stands</option>
-                <option value="Plushy" <%= "Plushy".equals(category) ? "selected" : "" %>>Plushies</option>
-                <option value="Scale" <%= "Scale".equals(category) ? "selected" : "" %>>Scale Figures</option>
-                <option value="Limited" <%= "Limited".equals(category) ? "selected" : "" %>>Limited</option>
-            </select>
-
-            <select name="sort" onchange="this.form.submit()" style="padding: 8px; border-radius: 4px; border: none;">
-                <option value="id_desc" <%= "id_desc".equals(sort) ? "selected" : "" %>>Newest</option>
-                <option value="price_asc" <%= "price_asc".equals(sort) ? "selected" : "" %>>Price: Low-High</option>
-                <option value="price_desc" <%= "price_desc".equals(sort) ? "selected" : "" %>>Price: High-Low</option>
-                <option value="name_asc" <%= "name_asc".equals(sort) ? "selected" : "" %>>Name: A-Z</option>
-            </select>
-            
-            <button type="submit" class="btn" style="background: var(--warning); color: white;">Filter</button>
-            
-            <% if(query != null && !query.isEmpty()) { %>
-                <a href="ProductList.jsp" style="color: #bdc3c7; font-size: 12px; align-self: center; text-decoration: none;">Clear</a>
-            <% } %>
-        </form>
-    </div>
-
-    <div class="nav-right">
-        <button class="btn" style="background: var(--success); color: white;" onclick="toggleAddForm()">+ Add New Product</button>
-    </div>
+    <form method="get" style="margin:0;">
+        <input type="text" name="query" placeholder="Find product..." value="<%= (query != null) ? query : "" %>">
+        <select name="sort">
+            <option value="id_desc">Newest First</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+        </select>
+        <button type="submit" class="btn" style="background: var(--success);">Filter</button>
+    </form>
 </div>
 
 <div class="main-card">
-    <div id="addFormSection">
-        <h3 style="margin-top:0;">Register New Product</h3>
-        <form method="post" action="ProductServlet">
-            <input type="hidden" name="action" value="insert">
-            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <input type="text" name="name" placeholder="Product Name" required style="flex:2; padding:10px;">
-                <input type="number" name="price" placeholder="Price" required style="flex:1; padding:10px;">
-                <input type="number" name="qty" placeholder="Qty" required style="flex:1; padding:10px;">
-                <input type="date" name="date" required style="flex:1; padding:10px;">
-                <button type="submit" class="btn" style="background: var(--success); color: white;">Save Product</button>
-            </div>
-        </form>
-    </div>
+
+    <h3 style="margin-top:0;">Quick Add Product</h3>
+    <form method="post" action="ProductServlet" enctype="multipart/form-data" class="add-bar">
+        <input type="hidden" name="action" value="insert">
+        <input type="text" name="name" placeholder="Item Name" required>
+        <input type="number" step="0.001" name="price" placeholder="Price (VND)" required>
+        <input type="number" name="qty" placeholder="Qty" required style="max-width: 80px;">
+        <input type="date" name="date" required>
+        <input type="file" name="image" accept="image/*" required style="flex:2;">
+        <button type="submit" class="btn" style="background: var(--success); color:white;">+ Add to Stock</button>
+    </form>
+
+    <br>
 
     <form method="post" action="ProductServlet" id="productForm">
         <table>
             <thead>
                 <tr>
-                    <th>Select</th><th>ID</th><th>Name</th><th>Price (VND)</th><th>Qty</th><th>Date</th>
+                    <th>Select</th>
+                    <th>ID</th>
+                    <th>Thumbnail</th>
+                    <th>Product Name</th>
+                    <th>Price (VND)</th>
+                    <th>Stock</th>
+                    <th>Date</th>
+                    <th>Description</th>
                 </tr>
             </thead>
             <tbody>
                 <%
-            while(rs.next()){
-            int id = rs.getInt("id");
-%>
+                try {
+                    conn = DBConnect.getConnection();
+                    String sql = "SELECT * FROM products WHERE 1=1";
+                    if (query != null && !query.trim().isEmpty()) sql += " AND name LIKE ?";
+                    
+                    if ("price_asc".equals(sort)) sql += " ORDER BY price ASC";
+                    else if ("price_desc".equals(sort)) sql += " ORDER BY price DESC";
+                    else sql += " ORDER BY id DESC";
+
+                    ps = conn.prepareStatement(sql);
+                    if (query != null && !query.trim().isEmpty()) ps.setString(1, "%" + query + "%");
+                    rs = ps.executeQuery();
+
+                    
+                    DecimalFormat df = new DecimalFormat("#,##0.###");
+
+                    while(rs.next()) {
+                        int id = rs.getInt("id");
+                        BigDecimal pPrice = rs.getBigDecimal("price");
+                        if(pPrice == null) pPrice = BigDecimal.ZERO;
+                %>
                 <tr>
                     <td><input type="radio" name="selectedId" value="<%= id %>" onclick="unlockRow(this)"></td>
                     <td><%= id %></td>
+                    <td>
+                        <img class="product-img"
+                             src="<%= request.getContextPath() %>/images/<%= rs.getString("image") %>"
+                             onerror="this.src='<%= request.getContextPath() %>/images/default.jpg'">
+                    </td>
                     <td><input type="text" name="name_<%= id %>" value="<%= rs.getString("name") %>" class="unlockable" readonly></td>
-                    <td><input type="number" name="price_<%= id %>" value="<%= rs.getDouble("price") %>" class="unlockable" readonly></td>
+                    <td>
+                        <input type="text" name="price_text_<%= id %>" value="<%= df.format(pPrice) %>" class="unlockable" readonly>
+                        <input type="hidden" name="price_<%= id %>" value="<%= pPrice %>">
+                    </td>
                     <td><input type="number" name="qty_<%= id %>" value="<%= rs.getInt("quantity") %>" class="unlockable" readonly></td>
                     <td><input type="date" name="date_<%= id %>" value="<%= rs.getDate("date") %>" class="unlockable" readonly></td>
+                    <td><input type="text" name="description_<%= id %>" value="<%= rs.getString("description") %>" class="unlockable" readonly></td>
                 </tr>
-                <% } conn.close(); %>
+                <%
+                    }
+                } catch(Exception e) {
+                    out.println("Error: " + e.getMessage());
+                } finally {
+                    try { if(rs != null) rs.close(); } catch(Exception e){}
+                    try { if(ps != null) ps.close(); } catch(Exception e){}
+                    try { if(conn != null) conn.close(); } catch(Exception e){}
+                }
+                %>
             </tbody>
         </table>
 
         <div id="actionPanel" style="display:none; margin-top:30px;">
-            <div class="status-msg">
-                ⚠️ Row Unlocked: You can now edit the product info above or delete this entry.
-            </div>
-            <div style="text-align: right;">
-                <button type="submit" name="action" value="update" class="btn" style="background: var(--warning); color:white;">Save Changes</button>
-                <button type="submit" name="action" value="delete" class="btn" style="background: var(--danger); color:white; margin-left:10px;" onclick="return confirm('Delete this product?')">Delete Product</button>
-            </div>
-        </div>
+    <div class="status-msg">
+        <span>ℹ️ Product Selection Unlocked: You can now modify details or remove this item from inventory.</span>
+    </div>
+
+    <div style="text-align: right;">
+        <button type="submit" name="action" value="update" class="btn btn-update">
+            Save Changes
+        </button>
+        <button type="submit" name="action" value="delete" class="btn btn-delete" onclick="return confirmDelete()">
+            Delete Product
+        </button>
+    </div>
+</div>
     </form>
 </div>
 
 <script>
-    function toggleAddForm() {
-        var section = document.getElementById("addFormSection");
-        section.style.display = (section.style.display === "none" || section.style.display === "") ? "block" : "none";
-    }
+function unlockRow(radio){
+    document.querySelectorAll('tr').forEach(r => r.classList.remove('active-row'));
+    document.querySelectorAll('.unlockable').forEach(i => i.readOnly = true);
 
-    function unlockRow(radio) {
+    let row = radio.closest('tr');
+    row.classList.add('active-row');
+    row.querySelectorAll('.unlockable').forEach(i => i.readOnly = false);
 
-        document.querySelectorAll('tr').forEach(r => r.classList.remove('active-row'));
-        document.querySelectorAll('.unlockable').forEach(i => i.readOnly = true);
+    document.getElementById("actionPanel").style.display = "block";
+}
 
-        var row = radio.closest('tr');
-        row.classList.add('active-row');
-        row.querySelectorAll('.unlockable').forEach(i => i.readOnly = false);
-        
-        document.getElementById("actionPanel").style.display = "block";
-    }
+function confirmDelete() {
+    return confirm("❗ WARNING: This will permanently remove the product from the catalog.\n\nAre you sure you want to proceed?");
+}
 
-    document.getElementById('productForm').onsubmit = function() {
-        this.querySelectorAll('.unlockable').forEach(i => i.readOnly = false);
-    };
+document.getElementById('productForm').onsubmit = function() {
+    this.querySelectorAll('.unlockable').forEach(i => i.readOnly = false);
+};
 </script>
 
 </body>

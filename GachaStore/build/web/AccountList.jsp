@@ -7,45 +7,92 @@
 
 <html>
 <head>
-    <title>Account Management</title>
+    <title>Account Management | GachaStore Admin</title>
     <style>
-        :root {
-            --primary: #2c3e50; --success: #27ae60; --warning: #f39c12; --danger: #e74c3c; --light: #f8f9fa;
+
+        @font-face {
+            font-family: 'Aptos SemiBold';
+            src: local('Aptos SemiBold'), local('Aptos-SemiBold');
         }
-        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; margin: 0; }
+
+        :root {
+            --primary: #2c3e50; 
+            --success: #27ae60; 
+            --warning: #f39c12; 
+            --danger: #e74c3c; 
+            --light: #f8f9fa;
+        }
+
+        body { 
+            background: #f0f2f5; 
+            font-family: 'Aptos SemiBold', 'Segoe UI', sans-serif; 
+            margin: 0; 
+        }
 
         .navbar {
-            background: var(--primary); padding: 15px 50px; display: flex;
-            justify-content: space-between; align-items: center; color: white; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        }
-        .main-card { 
-            background: white; padding: 30px; border-radius: 12px; width: 90%; 
-            max-width: 1200px; margin: 30px auto; box-shadow: 0 4px 20px rgba(0,0,0,0.1); 
+            background: var(--primary); 
+            padding: 15px 50px; 
+            display: flex;
+            justify-content: space-between; 
+            align-items: center; 
+            color: white; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
 
+        .main-card { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 12px; 
+            width: 90%; 
+            max-width: 1200px; 
+            margin: 30px auto; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1); 
+        }
+
+        /* FORM STYLING */
         #addFormSection {
-            display: none; background: var(--light); padding: 20px; border-radius: 8px;
-            margin-bottom: 25px; border-left: 5px solid var(--success);
+            display: none; 
+            background: var(--light); 
+            padding: 20px; 
+            border-radius: 8px;
+            margin-bottom: 25px; 
+            border-left: 5px solid var(--success);
         }
 
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { background: #f4f6f7; color: var(--primary); padding: 15px; text-align: left; }
+        th { background: #f4f6f7; color: var(--primary); padding: 15px; text-align: left; font-size: 18px;}
         td { padding: 12px; border-bottom: 1px solid #eee; }
 
         .unlockable { 
-            border: 1px solid transparent; background: transparent; padding: 8px; 
-            width: 100%; color: #333; pointer-events: none; transition: 0.2s;
-        }
-        .active-row .unlockable { 
-            border: 1px solid #3498db; background: #fff; pointer-events: auto; 
+            border: 1px solid transparent; 
+            background: transparent; 
+            padding: 8px; 
+            width: 100%; 
+            color: #333; 
+            pointer-events: none; 
+            transition: 0.2s;
+            font-family: inherit;
         }
 
-        .btn { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        .active-row { background-color: #ebf5fb; }
+        
+        .active-row .unlockable { 
+            border: 1px solid #3498db; 
+            background: #fff; 
+            pointer-events: auto; 
+        }
+
+        .btn { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-family: inherit; }
         .btn-home { background: transparent; color: white; border: 1px solid white; }
 
         .status-msg { 
-            background: #d1ecf1; color: #0c5460; padding: 10px; border-radius: 5px; 
-            margin-bottom: 15px; border: 1px solid #bee5eb; font-weight: bold;
+            background: #d1ecf1; 
+            color: #0c5460; 
+            padding: 10px; 
+            border-radius: 5px; 
+            margin-bottom: 15px; 
+            border: 1px solid #bee5eb; 
+            font-weight: bold;
         }
     </style>
 </head>
@@ -54,7 +101,7 @@
 <div class="navbar">
     <div class="nav-left">
         <button class="btn btn-home" onclick="window.location.href='home.jsp'">← Back to Home</button>
-        <span style="font-size: 1.2rem; font-weight: bold; margin-left:15px;">User Access Control</span>
+        <span style="font-size: 1.5rem; font-weight: bold; margin-left:15px;">System Administration</span>
     </div>
     <button class="btn" style="background: var(--success); color: white;" onclick="toggleAddForm()">+ Create New Account</button>
 </div>
@@ -80,7 +127,7 @@
         <table>
             <thead>
                 <tr>
-                    <th>Select</th><th>ID</th><th>Username</th><th>Password </th><th>Role</th>
+                    <th>Select</th><th>ID</th><th>Username</th><th>Password</th><th>Role</th>
                 </tr>
             </thead>
             <tbody>
@@ -92,7 +139,7 @@
                 %>
                 <tr>
                     <td><input type="radio" name="selectedId" value="<%= id %>" onclick="unlockAccount(this)"></td>
-                    <td><%= id %></td>
+                    <td><b><%= id %></b></td>
                     <td><input type="text" name="user_<%= id %>" value="<%= rs.getString("username") %>" class="unlockable" readonly></td>
                     <td>
                         <input type="password" name="pass_<%= id %>" value="<%= rs.getString("password") %>" 
@@ -112,11 +159,14 @@
 
         <div id="actionPanel" style="display:none; margin-top:30px;">
             <div class="status-msg">
-                ℹ️ Row Unlocked: You can now modify this user's details or delete the account.
+                ℹ️ User Selection Unlocked: Changes will be applied to the selected ID only.
             </div>
             <div style="text-align: right;">
                 <button type="submit" name="action" value="update" class="btn" style="background: var(--warning); color:white;">Save Changes</button>
-                <button type="submit" name="action" value="delete" class="btn" style="background: var(--danger); color:white; margin-left:10px;" onclick="return confirm('Delete this account?')">Delete User</button>
+                
+                <button type="submit" name="action" value="delete" 
+                        class="btn" style="background: var(--danger); color:white; margin-left:10px;" 
+                        onclick="return confirmDelete()">Delete Account</button>
             </div>
         </div>
     </form>
@@ -140,11 +190,13 @@
         row.classList.add('active-row');
         var rowSelect = row.querySelector('select'); if(rowSelect) rowSelect.disabled = false;
         var rowInputs = row.querySelectorAll('.unlockable'); rowInputs.forEach(i => i.readOnly = false);
-        
         document.getElementById("actionPanel").style.display = "block";
     }
-
-    document.getElementById('accountForm').onsubmit = function() {
+    function confirmDelete() {
+        const confirmMsg = "⚠️ CRITICAL ACTION ⚠️\n\nAre you sure you want to PERMANENTLY delete this user account?\nThis action cannot be undone.";
+        return confirm(confirmMsg);
+    }
+    document.getElementById('accountForm').onsubmit = function(e) {
         this.querySelectorAll('.unlockable, select').forEach(el => {
             el.readOnly = false;
             el.disabled = false;
